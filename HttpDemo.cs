@@ -10,12 +10,47 @@ namespace NetworkProgrammingP47
     internal class HttpDemo
     {
         private Stopwatch stopwatch = new();
-
         public async Task RunAsync()
         {
             Console.WriteLine("Http Demo");
+            // більш повне формування запиту, ніж URL, надає HttpRequestMessage
+            HttpRequestMessage httpRequest = new()
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri("https://itstep.org/"),
+                Version = new(1,1),
+                // Content = new StringContent("Hello, world")
+            };
+            httpRequest.Headers.Add("My-Header", "My-Value");
+
+            // Ресурси для роботи з мережею є некерованими (unmanaged)
+            // тому їх слід руйнувати або вживати авто-руйнування - using
+            using HttpClient httpClient = new();
+
+            // Повні деталі відповіді дають методи SendAsync / Send
+            HttpResponseMessage responseMessage = await httpClient.SendAsync(httpRequest);
+            Console.WriteLine($"HTTP/{responseMessage.Version} {(int)responseMessage.StatusCode} {responseMessage.ReasonPhrase}");
+            foreach(var header in responseMessage.Headers)
+            {
+                Console.WriteLine("{0}: {1}", 
+                    header.Key,
+                    String.Join(", ", header.Value));
+            }
+            Console.WriteLine();
+            // тіло (контент) пакету може бути великим, більш того, розподіленим
+            // за декількома пакетами-відповідями (chunks). Це зазначається заголовком
+            // Transfer-Encoding: chunked
+            Console.WriteLine(await responseMessage.Content.ReadAsStringAsync());
+        }
+
+        public async Task RunAsync1()
+        {
+            Console.WriteLine("Http Demo");
             String url;
-            try { url = GetAndValidateUrl(); }
+            try 
+            {
+                url = "https://itstep.org/";  // GetAndValidateUrl(); 
+            }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
@@ -78,4 +113,39 @@ namespace NetworkProgrammingP47
  *  
  * Запити та відповіді є відносно тривалими процесами, тому 
  * виконуються в асинхронному режимі.
+ * 
+ * Повна структура НТТР-запиту складається з наступного:
+ *                               | Перший рядок - завжди один, складається з трьох частин
+ * PATCH /user/admin HTTP/1.1    | МЕТОД path Protocol/version
+ * Connection: Keep-Alive        | Далі слідують заголовки за форматом
+ * Host: itstep.org              | Назва-Заголовку: Значення-Заголовку
+ * Accept: text/html             | по одному на рядок, загальна кількість - довільна
+ * Accept: text/plain            | Повтор заголовку - має формувати масив даних
+ * Content-Type: text/plain      |  за наявності тіла - необхідно зазначати його тип (МІМЕ) https://www.iana.org/assignments/media-types/media-types.xhtml
+ *                               | Порожній рядок - визначає кінець заголовків
+ * email=admin@i.ua              | Далі до кінця пакету - тіло - довільний набір даних
+ * 
+ * 
+ * Відповідь (Response) має схожу структуру, але з відмінностями у першому рядку - 
+ *  першим іде протокол (як у запиті), далі статус-код, далі фраза (reason-phrase)
+ *
+ * HTTP/1.1 200 OK
+ * Connection: Close
+ * Content-Type: application/json; charset=utf-8
+ * 
+ * {"name": "Admin", "email": "admin@i.ua"}
+ * 
+ * --------------------------------------------
+ * HTTP/1.1 400 Bad Request   | 406 Not Acceptable - формально некоректно, бо 406 це про заголовки
+ * Connection: Close
+ * Content-Type: text/html
+ * 
+ * E-mail domain i.ua is not allowed for administrators
+ * -------------------------------------------------
+ * 
+ * Тіло пакету - не обов'язковий елемент і може бути відсутнім.
+ * Більш того, запитам методами GET та HEAD заборонено мати тіло
+ * 
+ * Перелік статус-кодів та їх фраз стандартизований https://upload.wikimedia.org/wikipedia/commons/0/09/%D0%A1%D0%BF%D0%B8%D1%81%D0%BE%D0%BA_%D0%BA%D0%BE%D0%B4%D1%96%D0%B2_%D1%81%D1%82%D0%B0%D0%BD%D1%83_HTTP.pdf
+ * 
  */
