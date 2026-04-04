@@ -7,7 +7,8 @@ namespace NetworkProgrammingP47
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
-            new HttpDemo().RunAsync().Wait();
+            // new HttpDemo().RunAsync().Wait();
+            new ApiDemo().Run();
             Console.WriteLine("Program finished");
         }
     }
@@ -44,7 +45,7 @@ namespace NetworkProgrammingP47
  *     api - субдомен -- створюється користувачем
  *    /product/asus/412 - path або slug - внутрішній ідентифікатор ресурса
  *       path є завжди, якщо нічого не зазначено, то приймається "/"
- *    lang=uk&color=gray - Query (query-string)
+ *    lang=uk&color=gray - Query (query-string) у форматі: ключ=значення, роздільник - &
  * URI - Uniform Resource Identifier - рядок, який ідентифікує ресурс, але не обов'язково
  *         дозволяє на нього перейти. Можна дати приклад - посилання на літературу чи 
  *         компакт-диск, що офіційно видавався
