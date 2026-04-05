@@ -1,18 +1,61 @@
-﻿using System;
+﻿using NetworkProgrammingP47.Orm.Nbu;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using System.Xml.Serialization;
 
 namespace NetworkProgrammingP47
 {
     internal class ApiDemo
     {
+        private Exchange exchange;
         public void Run()
         {
             Console.WriteLine("Курси валют НБУ");
-            DemoJson();
+            DemoXmlOrm();   // у коді є завантаження exchange
+            Console.WriteLine($"Завантажено {exchange.Currencies.Count} курсів");
+            while(true)
+            {                
+                Console.Write("Введіть фрагмент назви валюти: ");
+                String? fragment = Console.ReadLine();
+                if (String.IsNullOrEmpty(fragment)) break;
+                var query = exchange.Currencies.Where(c => c.ShortName.Contains(fragment));
+                Console.WriteLine($"Знайдено {query.Count()} результатів");
+                foreach(var c in query)
+                {
+                    Console.WriteLine(c);
+                }
+            }            
+            // Реалізувати пошук без урахування розміру літер: USD = usd
+            // Додати до пошуку збіги за іменем (також без урахування розміру літер)
+        }
+        /* Д.З. Реалізувати завантаження курсів валют на задану дату
+         * https://bank.gov.ua/ua/open-data/api-dev
+         * https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date=20200302&json
+         * - Користувачу пропонується ввести дату
+         * - Здійснюється перевірка дати на валідність
+         * - Перевіряється, чи дата належить минулому часу
+         * - Виконується запит, переходить в режим пошуку (в меню вибору)
+         * ** Після 16:00, а також у вихідні дні встановлюється курс на 
+         *     найближчий робочий день. Врахувати це в умовах перевірки дати,
+         *     що її вводить користувач.
+         */
+
+        private void DemoJsonOrm()
+        {
+            String url = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json";
+            using HttpClient httpClient = new();
+            String body = httpClient.GetStringAsync(url).Result;
+            List<NbuRate> rates = JsonSerializer.Deserialize<List<NbuRate>>(body)!;
+            foreach (NbuRate rate in rates.OrderBy(r => r.Rate))
+            {
+                Console.WriteLine(rate);
+            }
         }
 
         private void DemoJson()
@@ -21,7 +64,7 @@ namespace NetworkProgrammingP47
             using HttpClient httpClient = new();
             String body = httpClient.GetStringAsync(url).Result;
             // Десеріалізація:
-            // є два види - за структурою JSON, та об'єктна-типізована
+            // є два види - за структурою JSON, та об'єктна-типізована (ORM)
             var jsonElement = JsonSerializer.Deserialize<JsonElement>(body);
             if (jsonElement.ValueKind == JsonValueKind.Array)
             {
@@ -53,12 +96,36 @@ namespace NetworkProgrammingP47
             // Console.WriteLine(body);
         }
 
+        private void DemoXmlOrm()
+        {
+            String url = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange";
+            using HttpClient httpClient = new();
+            Stream bodyStream = httpClient.GetStreamAsync(url).Result;
+            XmlSerializer serializer = new(typeof(Exchange));
+            exchange = (Exchange)serializer.Deserialize(bodyStream)!;
+            // foreach(var currency in exchange.Currencies)
+            // {
+            //     Console.WriteLine(currency);
+            // }
+        }
+
         private void DemoXml()
         {
             String url = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange";
             using HttpClient httpClient = new();
             String body = httpClient.GetStringAsync(url).Result;
-            Console.WriteLine(body);
+            // Console.WriteLine(body);
+            XDocument xmlDocument = XDocument.Parse(body);
+            foreach(var currency in xmlDocument.Root!.Descendants("currency"))
+            {
+                String cc = currency.Element("cc")!.Value;
+                String text = currency.Element("txt")!.Value;
+                Double rate = Double.Parse(
+                    currency.Element("rate")!.Value,
+                    CultureInfo.InvariantCulture      // щоб сприймав десятичку точку замість коми
+                );
+                Console.WriteLine($"{cc}  {text} {rate:F2}");
+            }
         }
     }
 }
@@ -129,4 +196,16 @@ namespace NetworkProgrammingP47
     "special": null
   },   
 ...
+ */
+
+/* ORM - Object Relation Mapping
+ * "відображення" даних з їх зв'язками на об'єкти та їх зв'язки -
+ * трансформація вихідних даних на структури, характерні для мови
+ * програмування
+ * 1. Описуємо тип даних (клас, структуру, запис тощо), за потреби
+ *     зазначаємо співвідношення імен даних різного представлення
+ * 2. Використовуємо інструментарій для перетворення переданих 
+ *     даних (XML, JSON тощо) до об'єктів та їх колекцій
+ * 3. У програмі використовуємо типізовані об'єкти замість 
+ *     узагальнених елементів
  */
