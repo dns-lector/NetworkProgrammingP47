@@ -8,7 +8,8 @@ namespace NetworkProgrammingP47
         {
             Console.OutputEncoding = Encoding.UTF8;
             // new HttpDemo().RunAsync().Wait();
-            new ApiDemo().Run();
+            // new ApiDemo().Run();
+            new SmtpDemo().Run();
             Console.WriteLine("Program finished");
         }
     }
