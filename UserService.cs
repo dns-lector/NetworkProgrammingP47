@@ -1,6 +1,8 @@
-﻿using System;
+﻿using NetworkProgrammingP47.Services;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace NetworkProgrammingP47
 {
@@ -23,6 +25,8 @@ namespace NetworkProgrammingP47
                 {
                     case '0': return;
                     case '1': SignUp();  break;
+                    case '2': Console.WriteLine( OtpService.ConfirmCode() );  break;
+                    case '3': Console.WriteLine( OtpService.TempPassword() );  break;
 
                     default: Console.WriteLine("Вибір не розпізнано\n"); break;
                 }
@@ -39,10 +43,43 @@ namespace NetworkProgrammingP47
                 Console.Write("Введіть E-mail: ");
                 email = Console.ReadLine()!;
                 // перевіряємо пошту на зовнішній формат (валідація)
-            } 
+                if(Regex.IsMatch(email, @"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$"))
+                {
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine("E-mail не відповідає формату, відкоригуйте");
+                }
+            }
+            Console.WriteLine(email);
+            String password = "";
+            while (true)
+            {
+                password = Console.ReadLine()!;
+                if (password.Length >= 6 && true)
+                {
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine("Пароль має бути щонайменше 6 символів, " +
+                        "серед яких має бути цифра, літера та спецсимвол");
+                }
+            }
+            String confirmCode = OtpService.ConfirmCode();
+            EmailService.SendConfirmCode(email, confirmCode);
+            Console.Write("Введіть код, надісланий на пошту: ");
+            String code = Console.ReadLine()!;
+
         }
     }
 }
+/* Д.З. Забезпечити валідацію паролю, що вводить користувач при реєстрації
+ * Пароль має бути щонайменше 6 символів,
+ * серед яких має бути цифра, літера та спецсимвол
+ * ** літери мають бути різного реєстру (як великі, так і маленькі)
+ */
 /* Сервіс роботи з користувачами:
  * реєстрація
  * перевірка пошти
