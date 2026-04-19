@@ -54,9 +54,26 @@ namespace NetworkProgrammingP47
                 </html>",
                 Subject = "Весняна пропозиція ☛"
             };
+            mailMessage.To.Add("azure.spd111.od.0@ukr.net");
             mailMessage.To.Add("dns.lector@ukr.net");
+            // Attachments - вкладення файлів (попередньо налаштовуємо файли на копіювання до директорії збірки)
+            mailMessage.Attachments.Add(
+                new Attachment(
+                    fileName: "./Attachments/NP.png",
+                    mediaType: "image/png"
+            ));
+            mailMessage.Attachments.Add(
+                new Attachment(
+                    fileName: "./Attachments/README.pdf",
+                    mediaType: "application/pdf"
+            ));
+            mailMessage.Attachments.Add(
+                new Attachment( 
+                    fileName: "./Attachments/дз.txt",
+                    mediaType: "text/plain"
+            ));
             smtpClient.Send(mailMessage);
-
+            smtpClient.Dispose();
         }
     }
 }
