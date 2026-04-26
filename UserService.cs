@@ -1,4 +1,5 @@
 ﻿using NetworkProgrammingP47.Dal;
+using NetworkProgrammingP47.Models;
 using NetworkProgrammingP47.Services;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace NetworkProgrammingP47
             while (true)
             {
                 Console.WriteLine(
-                    "Сервіс роботи з користувачами:\n" +
+                    "\nСервіс роботи з користувачами:\n" +
                     "1: реєстрація\n" +
                     "2: автентифікація (вхід)\n" +
                     "3: забув пароль\n" +
@@ -31,7 +32,7 @@ namespace NetworkProgrammingP47
                 {
                     case '0': return;
                     case '1': SignUp();  break;
-                    case '2': Console.WriteLine( OtpService.ConfirmCode() );  break;
+                    case '2': SignIn();  break;
                     case '3': Console.WriteLine( OtpService.TempPassword() );  break;
                     case 'i': try { dataAccessor.InstallTables(); } catch { return; }  break;
 
@@ -39,6 +40,90 @@ namespace NetworkProgrammingP47
                 }
             }
             
+        }
+
+        private void SignIn()
+        {
+            String email;
+            Console.Write("Введіть E-mail: ");  // azure.spd111.od.0@ukr.net
+            email = Console.ReadLine()!;
+
+            Console.Write("Введіть пароль (символи не будуть зображатись, ESC - повтор): ");
+            String? password;
+            do
+            {
+                Console.WriteLine();
+                Console.Write("> ");
+                password = InputPassword();
+            } while (password == null);
+            // Console.WriteLine(password);
+            Console.WriteLine();
+            UserEntity? userEntity = dataAccessor.Authenticate(email, password);
+            if(userEntity == null)
+            {
+                Console.WriteLine("У вході відмовлено");
+                return;
+            }
+            Console.WriteLine($"Вітаємо, {userEntity.Name}");
+            // Перевіряємо чи була підтверджена пошта за наявністю коду у БД
+            if(userEntity.ConfirmCode != null)
+            {
+                Console.WriteLine(
+                    $"У вас не підтверджена пошта, {userEntity.ConfirmCodeSentAt} " +
+                    $"вам на пошту було надіслано код");
+
+                int tries = 3;
+                String code;
+                while (true)
+                {
+                    tries -= 1;
+                    if(tries < 0)
+                    {
+                        Console.WriteLine("Кількість спроб вичерпано");
+                        return;
+                    }
+                    Console.Write("Введіть код (Enter - вихід): ");
+                    code = Console.ReadLine()!;
+                    if(code == "")
+                    {
+                        Console.WriteLine("Пошта лишається не підтвердженою");
+                        return;
+                    }
+                    if(code == userEntity.ConfirmCode)
+                    {
+                        // код введено правильно - вносимо дані до БД
+                        try { dataAccessor.ConfirmEmail(userEntity); }
+                        catch { return; }
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Код не прийнято");
+                    }
+                }
+                
+            }
+        }
+
+        private String? InputPassword()
+        {
+            StringBuilder sb = new();
+            ConsoleKeyInfo keyInfo;
+            while (true)
+            {
+                keyInfo = Console.ReadKey(true);
+                if (keyInfo.Key == ConsoleKey.Escape) return null;
+                if (keyInfo.Key == ConsoleKey.Enter) break;
+                if (keyInfo.Key == ConsoleKey.Backspace && sb.Length > 0)
+                {
+                    sb.Remove(sb.Length - 1, 1);
+                }
+                else
+                {
+                    sb.Append(keyInfo.KeyChar);
+                }
+            }
+            return sb.ToString();
         }
 
         private void SignUp()
@@ -97,6 +182,12 @@ namespace NetworkProgrammingP47
         }
     }
 }
+/* Д.З. Реалізувати надсилання повідомлень про вхід:
+ * при кожній новій автентифікації на пошту формується
+ * лист з приблизним вмістом: "Зафіксовано новий вхід 
+ * з вашим паролем 22.03.2026 18:00:15. Якщо це були 
+ * не ви, то радимо змінити пароль"
+ */
 /* Д.З. Реалізувати у DataAccessor метод для перевірки електронної
  * пошти - чи є така вже у БД
  * bool IsEmailUsed(String email)

@@ -27,6 +27,52 @@ namespace NetworkProgrammingP47.Dal
             }
         }
 
+        public void ConfirmEmail(UserEntity userEntity)
+        {
+            // метод, що викликається при успішному введені коду підтвердження пошти
+            String sql = $"UPDATE Users SET Code = NULL, CodeAt = NULL WHERE Id = '{userEntity.Id}'";
+            using SqlCommand cmd = new(sql, connection);
+            try
+            {
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                throw;
+            }
+        }
+
+        public UserEntity? Authenticate(String email, String password)
+        {
+            /* Оскільки пароль не зберігається у БД, тільки DK, ми не можемо
+             * сформувати єдиний запит на перевірку як логіна (email), так і 
+             * паролю.
+             * В такому разі до запиту включається тільки логін (email), а 
+             * правильність паролю перевіряється шляхом розрахунку DK за 
+             * переданим паролем та порівнянням його зі збереженим DK
+             */
+            // email = user' or '1'='1
+            // SELECT * FROM Users u WHERE u.Email = '{email}'
+            // SELECT * FROM Users u WHERE u.Email = 'user' or '1'='1'
+
+            String sql = $"SELECT * FROM Users u WHERE u.Email = @Email";
+            using SqlCommand command = new(sql, connection);
+            command.Parameters.AddWithValue("@Email", email);
+            using SqlDataReader reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                UserEntity userEntity = new(reader);   // знайшли користувача за email
+                // перевіряємо пароль:
+                // сіль (у даному разі) - це Id, 
+                // виконуємо розрахунок DK з переданого паролю та солі з БД
+                String dk = KdfService.Dk(password, userEntity.Id.ToString());
+                // порінюємо результат зі збереженим у БД
+                if (dk == userEntity.Dk) return userEntity;
+            }            
+            return null;
+        }
+
         public void AddUser(UserSignupModel model)
         {
             String sql = "INSERT INTO Users(Id, Name, Email, Code, CodeAt, Dk) " +
