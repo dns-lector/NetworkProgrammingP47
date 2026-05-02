@@ -68,8 +68,13 @@ namespace NetworkProgrammingP47.Dal
                 // виконуємо розрахунок DK з переданого паролю та солі з БД
                 String dk = KdfService.Dk(password, userEntity.Id.ToString());
                 // порінюємо результат зі збереженим у БД
+                // Console.WriteLine($"{dk} {userEntity.Dk}");
                 if (dk == userEntity.Dk) return userEntity;
-            }            
+            }  
+            else
+            {
+                Console.WriteLine("User not found");
+            }
             return null;
         }
 
@@ -90,6 +95,45 @@ namespace NetworkProgrammingP47.Dal
 
             try { cmd.ExecuteNonQuery(); }
             catch(Exception ex) { Console.WriteLine( ex.Message ); throw; }
+        }
+
+        public String? ResetPassword(String email, String name)
+        {
+            String sql = "SELECT u.Id FROM Users u WHERE u.Email = @Email AND u.Name = @Name";
+            using SqlCommand cmd = new(sql, connection);
+            cmd.Parameters.AddWithValue("@Email", email);
+            cmd.Parameters.AddWithValue("@Name", name);
+            object id;
+            try
+            {
+                id = cmd.ExecuteScalar();
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                throw;
+            }
+            if(id == null || id == DBNull.Value)
+            {
+                return null;
+            }
+
+            String newPassword = OtpService.TempPassword();
+            String dk = KdfService.Dk(newPassword, id.ToString()!);
+            sql = $"UPDATE Users SET Dk = '{dk}' WHERE Id = '{id}'";
+            using SqlCommand cmd2 = new(sql, connection);
+            Console.WriteLine(sql);
+            try
+            {
+                cmd2.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                throw;
+            }
+
+            return newPassword;
         }
 
         public void InstallTables()

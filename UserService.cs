@@ -33,7 +33,7 @@ namespace NetworkProgrammingP47
                     case '0': return;
                     case '1': SignUp();  break;
                     case '2': SignIn();  break;
-                    case '3': Console.WriteLine( OtpService.TempPassword() );  break;
+                    case '3': ForgotPassword();  break;
                     case 'i': try { dataAccessor.InstallTables(); } catch { return; }  break;
 
                     default: Console.WriteLine("Вибір не розпізнано\n"); break;
@@ -42,10 +42,35 @@ namespace NetworkProgrammingP47
             
         }
 
+        private void ForgotPassword()
+        {
+            // ТЗ переривати процес якщо пошта порожня
+            Console.Write("Введіть ваш E-mail: ");
+            String email = Console.ReadLine()!;
+            Console.Write("Введіть ваше ім'я, вказане при реєстрації: ");
+            String name = Console.ReadLine()!;
+            String? newPassword;
+            try
+            {
+                newPassword = dataAccessor.ResetPassword(email, name);
+            }
+            catch
+            {
+                Console.WriteLine("Виникла помилка, процес зупинено");
+                return;
+            }
+            if (newPassword != null)
+            {
+                EmailService.SendNewPassword(email, newPassword);
+                Console.WriteLine("Sent");
+            }
+            Console.WriteLine("Якщо ви ввели дані правильно, то на вашу пошту надіслано новий пароль");
+        }
+
         private void SignIn()
         {
             String email;
-            Console.Write("Введіть E-mail: ");  // azure.spd111.od.0@ukr.net
+            Console.Write("Введіть E-mail: ");  // azure.spd111.od.0@ukr.net  Ou\Ai7
             email = Console.ReadLine()!;
 
             Console.Write("Введіть пароль (символи не будуть зображатись, ESC - повтор): ");
@@ -130,12 +155,18 @@ namespace NetworkProgrammingP47
         {
             Console.WriteLine("Реєстрація нового користувача");
             String email = "";
+            // ТЗ переривати процес реєстрації якщо пошта порожня
             while (true)
             {
-                Console.Write("Введіть E-mail: ");
+                Console.Write("Введіть E-mail (порожня - вихід): ");
                 email = Console.ReadLine()!;
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    Console.WriteLine("Реєстрацію скасовано");
+                    return;
+                }
                 // перевіряємо пошту на зовнішній формат (валідація)
-                if(Regex.IsMatch(email, @"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$"))
+                if (Regex.IsMatch(email, @"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$"))
                 {
                     break;
                 }
@@ -145,10 +176,16 @@ namespace NetworkProgrammingP47
                 }
             }
             Console.Write("Створіть пароль: ");
-            String password = "";
+            String? password = "";
+            // ТЗ замінити введення паролю на відповідну функцію, за умови ESC - скасовувати реєстрацію
             while (true)
             {
-                password = Console.ReadLine()!;
+                password = InputPassword();
+                if (password == null)
+                {
+                    Console.WriteLine("Реєстрацію скасовано");
+                    return;
+                }
                 if (password.Length >= 6 && true)
                 {
                     break;
@@ -182,6 +219,12 @@ namespace NetworkProgrammingP47
         }
     }
 }
+/* Д.З. Реалізувати "авторизований режим":
+ * після успішної автентифікації запам'ятовувати її результат
+ * та не виводити пп.1-3 меню, залишати лише "вихід"
+ * ** замінити ці пункти на "перегляд персональних даних (кабінет)",
+ *     "змінити пароль", "редагувати дані"
+ */
 /* Д.З. Реалізувати надсилання повідомлень про вхід:
  * при кожній новій автентифікації на пошту формується
  * лист з приблизним вмістом: "Зафіксовано новий вхід 
